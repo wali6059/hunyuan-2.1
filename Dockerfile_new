@@ -72,18 +72,23 @@ RUN uv pip install pymeshlab==2022.2.post3 realesrgan==0.3.0 \
     basicsr==1.4.2 open3d==0.18.0 torchmetrics==1.6.0 timm torchdiffeq \
     || echo "Some optional packages failed"
 
-# Copy source code (after dependencies for better caching)
-COPY . .
+# Copy CUDA extension source first (for better caching)
+COPY hy3dgen/texgen/custom_rasterizer/ /app/hy3dgen/texgen/custom_rasterizer/
+COPY hy3dgen/texgen/differentiable_renderer/ /app/hy3dgen/texgen/differentiable_renderer/
 
-# Build custom CUDA extensions
+# Build CUDA extensions (cached separately from main source)
 RUN cd hy3dgen/texgen/custom_rasterizer && \
     MAX_JOBS=2 python setup.py build_ext --inplace && \
     uv pip install -e . --no-deps --force-reinstall && \
     cd ../differentiable_renderer && \
     MAX_JOBS=2 python setup.py build_ext --inplace && \
-    uv pip install -e . --no-deps --force-reinstall && \
-    cd ../../.. && \
     uv pip install -e . --no-deps --force-reinstall
+
+# Copy remaining source code (changes here won't trigger CUDA rebuild)
+COPY . .
+
+# Install main package
+RUN uv pip install -e . --no-deps --force-reinstall
 
 # Download models (separate cacheable layer)
 RUN mkdir -p /app/weights && \
