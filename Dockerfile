@@ -46,7 +46,7 @@ RUN uv venv
 # Set virtual environment path persistently
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/.venv/lib/python3.10/site-packages:$PYTHONPATH"
+ENV PYTHONPATH="/app/.venv/lib/python3.10/site-packages:/app"
 
 # Copy all source code first (needed for proper builds)
 COPY . .
