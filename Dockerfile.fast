@@ -91,8 +91,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Runtime Layer 3: Python dependencies (already in conda from builder)
-# Dependencies already installed via --system in builder stage
+# Runtime Layer 3: Copy Python packages from builder (critical!)
+COPY --from=builder /opt/conda/lib/python3.11/site-packages /opt/conda/lib/python3.11/site-packages
 
 # Runtime Layer 4: Core modules (medium size, stable)
 COPY --from=builder /app/hy3dshape /app/hy3dshape
