@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.log
+.cache/
+
+# Model weights (downloaded at runtime)
+weights/
+models/
+
+# Build artifacts (except wheels)
+build/
+dist/
+*.egg-info/
