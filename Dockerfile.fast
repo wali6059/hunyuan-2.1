@@ -76,9 +76,13 @@ RUN if [ -f ./wheels/*.whl ]; then \
 # =============================================================================
 FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime AS runtime
 
-# Runtime Layer 1: Essential runtime libraries (PyTorch already included)
+# Runtime Layer 1: Add CUDA repository and install runtime libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglu1-mesa libegl1 ca-certificates \
+    wget ca-certificates gnupg2 && \
+    wget -qO - https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub | apt-key add - && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglu1-mesa libegl1 \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6 \
     cuda-nvrtc-12-1 cuda-cccl-12-1 \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
