@@ -24,10 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     CUDA_HOME=/usr/local/cuda \
-    PATH=${CUDA_HOME}/bin:${PATH} \
-    LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH} \
     TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" \
     FORCE_CUDA=1
+
+# Set CUDA paths after CUDA_HOME is defined
+ENV PATH=/usr/local/cuda/bin:${PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
 # Copy uv and create workspace
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -125,14 +127,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     CUDA_HOME=/usr/local/cuda \
-    PATH=${CUDA_HOME}/bin:${PATH} \
-    LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH} \
     VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app/.venv/lib/python3.10/site-packages:/app" \
     HY3DGEN_MODELS=/app/weights \
     PYOPENGL_PLATFORM=egl \
     CUDA_VISIBLE_DEVICES=0
+
+# Set paths after variables are defined
+ENV PATH="/app/.venv/bin:/usr/local/cuda/bin:${PATH}" \
+    LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 
 WORKDIR /app
 
