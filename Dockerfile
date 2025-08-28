@@ -31,7 +31,7 @@ RUN cd hy3dpaint/custom_rasterizer && \
 # Build wheel for DifferentiableRenderer (C++ pybind11 extension)
 RUN cd hy3dpaint/DifferentiableRenderer && \
     bash compile_mesh_painter.sh && \
-    python -c "
+    cat > setup.py << 'EOF'
 from setuptools import setup, Extension
 import pybind11
 
@@ -49,7 +49,8 @@ setup(
     version='0.1.0',
     zip_safe=False,
 )
-" > setup.py && \
+EOF
+RUN cd hy3dpaint/DifferentiableRenderer && \
     python setup.py bdist_wheel && \
     cp dist/*.whl /wheels/ && \
     echo "Built wheels: $(ls /wheels/)"
