@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git wget curl unzip ca-certificates \
     libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6-dev \
+    blender \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Layer 2: Environment and UV installer
@@ -31,7 +32,7 @@ RUN uv pip install --system \
 # Layer 5: Build tools and computation libraries (stable)
 RUN uv pip install --system \
     wheel setuptools pybind11[global] ninja packaging cmake \
-    numpy==1.24.4 scipy==1.14.1
+    numpy==1.21.6 scipy==1.14.1
 
 # Layer 6: Computer vision and mesh processing (stable)
 RUN uv pip install --system \
@@ -49,7 +50,7 @@ RUN uv pip install --system \
 # Layer 9: API and cloud packages (stable)
 RUN uv pip install --system \
     fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.10.6 \
-    boto3 runpod requests Pillow
+    boto3 runpod requests Pillow hf_xet
 
 # Layer 10: Optional packages (separate layer for failure tolerance)
 RUN uv pip install --system pymeshlab==2022.2.post3 realesrgan==0.3.0 \
@@ -62,7 +63,23 @@ COPY hy3dpaint/ ./hy3dpaint/
 COPY api_server.py model_worker.py textureGenPipeline.py torchvision_fix.py ./
 COPY api_models.py constants.py logger_utils.py ./
 
-# Layer 12: Install pre-built local wheels (SUPER FAST - no compilation!)
+# Layer 12: Download RealESRGAN checkpoint
+RUN mkdir -p /app/ckpt && \
+    wget -O /app/ckpt/RealESRGAN_x4plus.pth \
+    https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+
+# Layer 13: Compile mesh inpaint processor C++ extension
+WORKDIR /app/hy3dpaint/DifferentiableRenderer
+RUN chmod +x compile_mesh_painter.sh && ./compile_mesh_painter.sh
+
+# Layer 14: Compile custom rasterizer CUDA extension
+WORKDIR /app/hy3dpaint/custom_rasterizer
+RUN python setup.py build_ext --inplace
+
+# Back to main workdir
+WORKDIR /app
+
+# Layer 15: Install pre-built local wheels (SUPER FAST - no compilation!)
 COPY wheels/ ./wheels/
 RUN if [ -f ./wheels/*.whl ]; then \
         uv pip install --system ./wheels/*.whl --no-deps --force-reinstall && \
@@ -74,17 +91,13 @@ RUN if [ -f ./wheels/*.whl ]; then \
 # =============================================================================
 # RUNTIME STAGE - Optimized for fast extraction on Runpod
 # =============================================================================
-FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime AS runtime
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel AS runtime
 
-# Runtime Layer 1: Add CUDA repository and install runtime libraries
+# Runtime Layer 1: Install runtime libraries including Blender
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget ca-certificates gnupg2 && \
-    wget -qO - https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub | apt-key add - && \
-    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglu1-mesa libegl1 \
+    libgl1 libglu1-mesa libegl1 ca-certificates \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6 \
-    cuda-nvrtc-12-1 cuda-cccl-12-1 \
+    blender \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Runtime Layer 2: Environment (tiny layer)  
@@ -99,9 +112,10 @@ WORKDIR /app
 # Runtime Layer 3: Copy Python packages from builder (critical!)
 COPY --from=builder /opt/conda/lib/python3.11/site-packages /opt/conda/lib/python3.11/site-packages
 
-# Runtime Layer 4: Core modules (medium size, stable)
+# Runtime Layer 4: Core modules with compiled extensions (medium size, stable)
 COPY --from=builder /app/hy3dshape /app/hy3dshape
 COPY --from=builder /app/hy3dpaint /app/hy3dpaint
+COPY --from=builder /app/ckpt /app/ckpt
 
 # Runtime Layer 5: Application files (small, changes most frequently)
 COPY --from=builder /app/api_server.py /app/model_worker.py /app/textureGenPipeline.py /app/
