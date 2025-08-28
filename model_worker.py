@@ -130,11 +130,14 @@ class ModelWorker:
         # Initialize shape generation pipeline (matching demo.py)
         self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
         
-        # Initialize texture generation pipeline (matching demo.py)
+        # Initialize texture generation pipeline (exactly like demo.py)
         max_num_view = 6  # can be 6 to 9
         resolution = 512  # can be 768 or 512
         conf = Hunyuan3DPaintConfig(max_num_view, resolution)
-        # Use default paths from config - no need to override
+        # CRITICAL: Set paths exactly like original demo.py
+        conf.realesrgan_ckpt_path = "hy3dpaint/ckpt/RealESRGAN_x4plus.pth"
+        conf.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"
+        conf.custom_pipeline = "hy3dpaint/hunyuanpaintpbr"
         self.paint_pipeline = Hunyuan3DPaintPipeline(conf)
         # clean cache in save_dir (create directory if not exists)
         os.makedirs(self.save_dir, exist_ok=True)

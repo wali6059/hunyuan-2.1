@@ -39,16 +39,12 @@ class Hunyuan3DPaintConfig:
     def __init__(self, max_num_view, resolution):
         self.device = "cuda"
 
-# Configuration paths for deployment structure
-        self.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"  
-        self.custom_pipeline = "hy3dpaint/hunyuanpaintpbr"  # Keep full path for deployment
+        # Configuration paths (matching original exactly)
+        self.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"
+        self.custom_pipeline = "hunyuanpaintpbr"  # Fixed to match original - NO "hy3dpaint/" prefix
         self.multiview_pretrained_path = "tencent/Hunyuan3D-2.1"
         self.dino_ckpt_path = "facebook/dinov2-giant"
-        # RealESRGAN checkpoint - match original path structure
         self.realesrgan_ckpt_path = "ckpt/RealESRGAN_x4plus.pth"
-        if not os.path.exists(self.realesrgan_ckpt_path):
-            print(f"Warning: RealESRGAN checkpoint not found at {self.realesrgan_ckpt_path}")
-            self.realesrgan_ckpt_path = None
 
         self.raster_mode = "cr"
         self.bake_mode = "back_sample"
