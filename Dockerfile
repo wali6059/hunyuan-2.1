@@ -20,9 +20,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
-# Layer 3: Skip PyTorch - already in base image (~14GB saved)
+# Layer 3: Create virtual environment
+RUN uv venv
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/.venv/lib/python3.11/site-packages:/app"
 
-# Layer 7: Core ML dependencies (stable layer)
+# Layer 4: Core ML dependencies (stable layer)
 RUN uv pip install \
     transformers==4.46.0 diffusers==0.30.0 accelerate==1.1.1 \
     huggingface-hub==0.30.2 safetensors==0.4.4 einops==0.8.0
