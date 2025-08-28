@@ -132,17 +132,17 @@ RUN mkdir -p /app/weights
 
 # Download Hunyuan3D-2.1 models (do this in build stage to include in final image)
 RUN echo "Downloading Hunyuan3D-2.1 models..." && \
-    python -c "
-from huggingface_hub import snapshot_download
-import os
-os.environ['HF_HOME'] = '/app/weights'
-snapshot_download(
-    repo_id='tencent/Hunyuan3D-2.1',
-    cache_dir='/app/weights',
-    local_dir='/app/weights/tencent/Hunyuan3D-2.1',
-    local_dir_use_symlinks=False
-)
-print('Models downloaded successfully')
+    python -c "\
+from huggingface_hub import snapshot_download; \
+import os; \
+os.environ['HF_HOME'] = '/app/weights'; \
+snapshot_download( \
+    repo_id='tencent/Hunyuan3D-2.1', \
+    cache_dir='/app/weights', \
+    local_dir='/app/weights/tencent/Hunyuan3D-2.1', \
+    local_dir_use_symlinks=False \
+); \
+print('Models downloaded successfully'); \
 "
 
 # =============================================================================
