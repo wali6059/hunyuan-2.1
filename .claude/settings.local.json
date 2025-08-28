@@ -18,7 +18,8 @@
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/**)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": [],

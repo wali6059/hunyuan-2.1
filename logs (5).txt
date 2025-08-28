@@ -1,0 +1,78 @@
+2025-08-28T13:05:54.283650416Z ==========
+2025-08-28T13:05:54.283659920Z == CUDA ==
+2025-08-28T13:05:54.283715113Z ==========
+2025-08-28T13:05:54.285658937Z CUDA Version 12.1.1
+2025-08-28T13:05:54.286322569Z Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+2025-08-28T13:05:54.286920802Z This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+2025-08-28T13:05:54.286922584Z By pulling and using the container, you accept the terms and conditions of this license:
+2025-08-28T13:05:54.286923967Z https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+2025-08-28T13:05:54.286926490Z A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+2025-08-28T13:05:58.759356022Z Torchvision version: 0.20.1+cu121
+2025-08-28T13:05:58.759388400Z torchvision.transforms.functional_tensor not found, applying compatibility fix...
+2025-08-28T13:05:58.759409913Z Applied compatibility fix: created functional_tensor mock module
+2025-08-28T13:05:59.331070527Z Torchvision version: 0.20.1+cu121
+2025-08-28T13:05:59.331080752Z torchvision.transforms.functional_tensor is available
+2025-08-28T13:05:59.764102579Z The cache for model files in Transformers v4.22.0 has been updated. Migrating your old cache. This is a one-time only operation. You can interrupt this and resume the migration later on by calling `transformers.utils.move_cache()`.
+2025-08-28T13:05:59.764941305Z 0it [00:00, ?it/s]0it [00:00, ?it/s]
+2025-08-28T13:06:45.448564043Z Bpy IO CAN NOT BE Imported!!!
+2025-08-28T13:06:45.448593717Z Using trimesh as fallback for GLB conversion
+2025-08-28T13:06:45.844437109Z Initializing Hunyuan3D 2.1 models...
+2025-08-28T13:06:45.844530690Z 2025-08-28 13:06:45,844 - hy3dgen.shapgen - INFO - Loading the model tencent/Hunyuan3D-2.1 on worker 66bd9e ...
+2025-08-28T13:06:45.844558742Z model_worker.py     :125  2025-08-28 13:06:45,844 Loading the model tencent/Hunyuan3D-2.1 on worker 66bd9e ...
+2025-08-28T13:06:45.844890563Z Downloading data from 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx' to file '/root/.u2net/u2net.onnx'.
+2025-08-28T13:06:49.686714031Z   0%|                                               | 0.00/176M [00:00<?, ?B/s]  0%|                                       | 113k/176M [00:00<02:39, 1.10MB/s]  0%|▏                                      | 688k/176M [00:00<00:45, 3.82MB/s]  2%|▋                                     | 2.91M/176M [00:00<00:14, 12.2MB/s]  7%|██▌                                   | 11.6M/176M [00:00<00:03, 41.7MB/s]  9%|███▍                                  | 16.1M/176M [00:00<00:03, 42.7MB/s] 15%|█████▋                                | 26.6M/176M [00:00<00:02, 64.0MB/s] 19%|███████▏                              | 33.0M/176M [00:00<00:02, 63.8MB/s] 25%|█████████▎                            | 43.2M/176M [00:00<00:01, 75.8MB/s] 30%|███████████▏                          | 52.0M/176M [00:00<00:01, 79.5MB/s] 34%|████████████▉                         | 59.9M/176M [00:01<00:01, 68.6MB/s] 38%|██████████████▍                       | 67.0M/176M [00:01<00:01, 68.7MB/s] 42%|███████████████▉                      | 74.1M/176M [00:01<00:01, 59.0MB/s] 46%|█████████████████▎                    | 80.3M/176M [00:01<00:01, 54.5MB/s] 49%|██████████████████▌                   | 86.0M/176M [00:01<00:01, 51.6MB/s] 52%|███████████████████▋                  | 91.4M/176M [00:01<00:01, 50.5MB/s] 55%|████████████████████▊                 | 96.5M/176M [00:01<00:01, 49.2MB/s] 58%|██████████████████████▍                | 102M/176M [00:01<00:01, 48.2MB/s] 60%|███████████████████████▌               | 106M/176M [00:02<00:01, 48.0MB/s] 63%|████████████████████████▋              | 111M/176M [00:02<00:01, 48.0MB/s] 66%|█████████████████████████▋             | 116M/176M [00:02<00:01, 47.6MB/s] 69%|██████████████████████████▊            | 121M/176M [00:02<00:01, 47.1MB/s] 71%|███████████████████████████▊           | 126M/176M [00:02<00:01, 47.4MB/s] 74%|████████████████████████████▉          | 130M/176M [00:02<00:00, 47.7MB/s] 77%|█████████████████████████████▉         | 135M/176M [00:02<00:00, 48.0MB/s] 80%|███████████████████████████████        | 140M/176M [00:02<00:00, 48.2MB/s] 82%|████████████████████████████████▏      | 145M/176M [00:02<00:00, 47.7MB/s] 85%|█████████████████████████████████▏     | 150M/176M [00:02<00:00, 47.9MB/s] 88%|██████████████████████████████████▎    | 155M/176M [00:03<00:00, 48.5MB/s] 91%|███████████████████████████████████▍   | 160M/176M [00:03<00:00, 48.8MB/s] 94%|████████████████████████████████████▌  | 165M/176M [00:03<00:00, 49.1MB/s] 96%|█████████████████████████████████████▌ | 170M/176M [00:03<00:00, 49.1MB/s] 99%|██████████████████████████████████████▋| 175M/176M [00:03<00:00, 48.4MB/s]  0%|                                               | 0.00/176M [00:00<?, ?B/s]100%|███████████████████████████████████████| 176M/176M [00:00<00:00, 1.28TB/s]
+2025-08-28T13:06:50.396286373Z 2025-08-28 13:06:50,396 - hy3dgen.shapgen - INFO - Try to load model from local path: /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1
+2025-08-28T13:06:50.396307645Z utils.py            :100  2025-08-28 13:06:50,396 Try to load model from local path: /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1
+2025-08-28T13:06:50.396353925Z 2025-08-28 13:06:50,396 - hy3dgen.shapgen - INFO - Model path not exists, try to download from huggingface
+2025-08-28T13:06:50.396362809Z utils.py            :102  2025-08-28 13:06:50,396 Model path not exists, try to download from huggingface
+2025-08-28T13:07:25.991043676Z Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:00<00:00,  3.95it/s]Fetching 2 files: 100%|██████████| 2/2 [00:35<00:00, 20.72s/it]Fetching 2 files: 100%|██████████| 2/2 [00:35<00:00, 17.65s/it]
+2025-08-28T13:07:25.996392029Z 2025-08-28 13:07:25,996 - hy3dgen.shapgen - INFO - Loading model from /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1/model.fp16.ckpt
+2025-08-28T13:07:25.996441624Z pipelines.py        :154  2025-08-28 13:07:25,996 Loading model from /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1/model.fp16.ckpt
+2025-08-28T13:07:36.947044503Z using moe
+2025-08-28T13:07:39.158885214Z using moe
+2025-08-28T13:07:41.370522318Z using moe
+2025-08-28T13:07:43.616372943Z using moe
+2025-08-28T13:07:45.850026027Z using moe
+2025-08-28T13:07:48.040645458Z using moe
+2025-08-28T13:07:50.166771875Z PointCrossAttentionEncoder INFO: pc_sharpedge_size is zero
+2025-08-28T13:07:57.268203776Z Traceback (most recent call last):
+2025-08-28T13:07:57.268226621Z   File "/app/api_server.py", line 158, in <module>
+2025-08-28T13:07:57.268269465Z     init_models()
+2025-08-28T13:07:57.268281784Z   File "/app/api_server.py", line 122, in init_models
+2025-08-28T13:07:57.268303617Z     worker = ModelWorker(
+2025-08-28T13:07:57.268306942Z              ^^^^^^^^^^^^
+2025-08-28T13:07:57.268308144Z   File "/app/model_worker.py", line 131, in __init__
+2025-08-28T13:07:57.268364008Z     self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
+2025-08-28T13:07:57.268389186Z                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T13:07:57.268402576Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 220, in from_pretrained
+2025-08-28T13:07:57.268458461Z     return cls.from_single_file(
+2025-08-28T13:07:57.268469377Z            ^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T13:07:57.268473093Z   File "/app/./hy3dshape/hy3dshape/utils/utils.py", line 83, in wrapper
+2025-08-28T13:07:57.268526714Z     result = func(*args, **kwargs)
+2025-08-28T13:07:57.268554666Z              ^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T13:07:57.268562798Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 178, in from_single_file
+2025-08-28T13:07:57.268601647Z     scheduler = instantiate_from_config(config['scheduler'])
+2025-08-28T13:07:57.268651101Z                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T13:07:57.268653245Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 126, in instantiate_from_config
+2025-08-28T13:07:57.268686996Z     instance = cls(**kwargs)
+2025-08-28T13:07:57.268707907Z                ^^^^^^^^^^^^^
+2025-08-28T13:07:57.268716310Z   File "/opt/conda/lib/python3.11/site-packages/diffusers/configuration_utils.py", line 653, in inner_init
+2025-08-28T13:07:57.268814879Z     init(self, *args, **init_kwargs)
+2025-08-28T13:07:57.268826656Z   File "/app/./hy3dshape/hy3dshape/schedulers.py", line 86, in __init__
+2025-08-28T13:07:57.268890202Z     timesteps = torch.from_numpy(timesteps).to(dtype=torch.float32)
+2025-08-28T13:07:57.268907268Z                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T13:07:57.268911424Z TypeError: expected np.ndarray (got numpy.ndarray)
+2025-08-28T13:08:04.278889679Z ==========
+2025-08-28T13:08:04.278933796Z == CUDA ==
+2025-08-28T13:08:04.278938152Z ==========
+2025-08-28T13:08:04.281334019Z CUDA Version 12.1.1
+2025-08-28T13:08:04.281990209Z Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+2025-08-28T13:08:04.282559729Z This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+2025-08-28T13:08:04.282562443Z By pulling and using the container, you accept the terms and conditions of this license:
+2025-08-28T13:08:04.282564766Z https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+2025-08-28T13:08:04.282569363Z A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+2025-08-28T13:08:08.653520015Z Torchvision version: 0.20.1+cu121
+2025-08-28T13:08:08.653542219Z torchvision.transforms.functional_tensor not found, applying compatibility fix...
+2025-08-28T13:08:08.653564062Z Applied compatibility fix: created functional_tensor mock module
+2025-08-28T13:08:09.216223650Z Torchvision version: 0.20.1+cu121
+2025-08-28T13:08:09.216242238Z torchvision.transforms.functional_tensor is available

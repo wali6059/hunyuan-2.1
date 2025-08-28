@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git wget curl unzip ca-certificates \
     libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6-dev \
-    blender \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Layer 2: Environment and UV installer
@@ -32,7 +31,7 @@ RUN uv pip install --system \
 # Layer 5: Build tools and computation libraries (stable)
 RUN uv pip install --system \
     wheel setuptools pybind11[global] ninja packaging cmake \
-    numpy==1.23.5 scipy==1.11.4
+    numpy==1.24.4 scipy==1.14.1
 
 # Layer 6: Computer vision and mesh processing (stable)
 RUN uv pip install --system \
@@ -41,7 +40,7 @@ RUN uv pip install --system \
 
 # Layer 7: Specialized ML packages (medium stability)
 RUN uv pip install --system \
-    rembg==2.0.65 onnxruntime-gpu xatlas==0.0.9
+    rembg==2.0.65 onnxruntime==1.16.3 xatlas==0.0.9 bpy==4.0
 
 # Layer 8: Configuration and utility packages (stable)
 RUN uv pip install --system \
@@ -68,13 +67,13 @@ RUN mkdir -p /app/ckpt && \
     wget -O /app/ckpt/RealESRGAN_x4plus.pth \
     https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
 
-# Layer 13: Compile mesh inpaint processor C++ extension
+# Layer 13: Compile custom rasterizer CUDA extension (like original)
+WORKDIR /app/hy3dpaint/custom_rasterizer
+RUN pip install -e .
+
+# Layer 14: Compile mesh inpaint processor C++ extension (like original)
 WORKDIR /app/hy3dpaint/DifferentiableRenderer
 RUN chmod +x compile_mesh_painter.sh && ./compile_mesh_painter.sh
-
-# Layer 14: Compile custom rasterizer CUDA extension
-WORKDIR /app/hy3dpaint/custom_rasterizer
-RUN python setup.py build_ext --inplace
 
 # Back to main workdir
 WORKDIR /app
@@ -93,11 +92,10 @@ RUN if [ -f ./wheels/*.whl ]; then \
 # =============================================================================
 FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel AS runtime
 
-# Runtime Layer 1: Install runtime libraries including Blender
+# Runtime Layer 1: Install runtime libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglu1-mesa libegl1 ca-certificates \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6 \
-    blender \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Runtime Layer 2: Environment (tiny layer)  
