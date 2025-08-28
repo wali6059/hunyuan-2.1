@@ -1,212 +1,111 @@
 # =============================================================================
-# BUILD STAGE - Contains all build dependencies and compilation
+# BUILD STAGE - Using pre-built PyTorch base for fast deployment
 # =============================================================================
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel AS builder
 
-# Install comprehensive system dependencies for building
-RUN apt-get update && apt-get install -y \
-    build-essential cmake ninja-build pkg-config \
-    gcc g++ gdb clang \
-    python3.10 python3.10-dev python3.10-venv python3-pip \
-    git wget curl unzip \
-    libgl1-mesa-dev libglib2.0-0 libsm6 libxrender1 libxext6 \
-    libglu1-mesa-dev libxmu6 libfreetype6-dev libopenblas-dev \
-    libegl1-mesa-dev libxi6 libgconf-2-4 libxrandr2 libxss1 \
-    libgtk-3-dev libgdk-pixbuf2.0-dev libxcomposite1 libxcursor1 \
-    libxdamage1 libxfixes3 libxi6 libxinerama1 libxrandr2 libxss1 \
-    libgconf-2-4 libasound2-dev libpango1.0-dev libatk1.0-dev \
-    libcairo-gobject2 libgtk-3-0 libgdk-pixbuf2.0-0 \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Layer 1: Essential build tools (PyTorch already included in base)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build pkg-config gcc g++ \
+    git wget curl unzip ca-certificates \
+    libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
+    libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6-dev \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set Python environment
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Layer 2: Environment and UV installer
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" \
+    FORCE_CUDA=1
 
-# Set comprehensive CUDA environment for compilation
-ENV CUDA_HOME=/usr/local/cuda
-ENV CUDA_ROOT=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
-ENV LIBRARY_PATH=${CUDA_HOME}/lib64/stubs:${LIBRARY_PATH}
-ENV TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0"
-ENV CUDA_NVCC_FLAGS="--allow-unsupported-compiler --expt-relaxed-constexpr --expt-extended-lambda"
-ENV FORCE_CUDA=1
-ENV TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
-
-# Copy uv from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 WORKDIR /app
 
-# Create virtual environment first
-RUN uv venv
+# Layer 3: Skip PyTorch - already in base image (~14GB saved)
 
-# Set virtual environment path persistently
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/.venv/lib/python3.10/site-packages:/app"
-
-# Copy all source code first (needed for proper builds)
-COPY . .
-
-# Install PyTorch with compatible CUDA version (CUDA 12.8 detected)
-RUN echo "Installing PyTorch with CUDA 12.1 support (compatible with 12.8)..." && \
-    uv pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 \
-    --index-url https://download.pytorch.org/whl/cu121
-
-# Install essential build dependencies
+# Layer 7: Core ML dependencies (stable layer)
 RUN uv pip install \
-    wheel setuptools \
-    pybind11[global] \
-    ninja \
-    packaging \
-    cmake
+    transformers==4.46.0 diffusers==0.30.0 accelerate==1.1.1 \
+    huggingface-hub==0.30.2 safetensors==0.4.4 einops==0.8.0
 
-# Install requirements with error handling
-RUN echo "Installing requirements..." && \
-    uv pip install -r requirements.txt --no-deps || \
-    (echo "Some packages failed, continuing..." && exit 0)
+# Layer 8: Build tools and computation libraries (stable)
+RUN uv pip install \
+    wheel setuptools pybind11[global] ninja packaging cmake \
+    numpy==1.24.4 scipy==1.14.1
 
-# Build custom extensions with proper error handling
-RUN echo "Building custom rasterizer..." && \
-    cd hy3dgen/texgen/custom_rasterizer && \
-    MAX_JOBS=4 python setup.py build_ext --inplace \
-    --verbose --debug && \
+# Layer 9: Computer vision and mesh processing (stable)
+RUN uv pip install \
+    opencv-python==4.10.0.84 imageio==2.36.0 scikit-image==0.24.0 \
+    trimesh==4.4.7 pygltflib==1.16.3
+
+# Layer 10: Specialized ML packages (medium stability)
+RUN uv pip install \
+    rembg==2.0.65 onnxruntime-gpu xatlas==0.0.9
+
+# Layer 11: Configuration and utility packages (stable)
+RUN uv pip install \
+    omegaconf==2.3.0 pyyaml==6.0.2 tqdm==4.66.5 psutil==6.0.0
+
+# Layer 12: API and cloud packages (stable)
+RUN uv pip install \
+    fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.10.6 \
+    boto3 runpod requests Pillow
+
+# Layer 13: Optional packages (separate layer for failure tolerance)
+RUN uv pip install pymeshlab==2022.2.post3 realesrgan==0.3.0 \
+    basicsr==1.4.2 open3d==0.18.0 torchmetrics==1.6.0 timm torchdiffeq \
+    || echo "Some optional packages failed"
+
+# Layer 14: Application source code (changes most frequently)
+COPY hy3dshape/ ./hy3dshape/
+COPY hy3dpaint/ ./hy3dpaint/
+COPY api_server.py model_worker.py textureGenPipeline.py torchvision_fix.py ./
+COPY api_models.py constants.py logger_utils.py ./
+
+# Layer 15: CUDA extensions (expensive build, separate layer)
+RUN cd hy3dpaint/custom_rasterizer && \
+    MAX_JOBS=2 python setup.py build_ext --inplace && \
     uv pip install -e . --no-deps --force-reinstall
 
-RUN echo "Building differentiable renderer..." && \
-    cd hy3dgen/texgen/differentiable_renderer && \
-    MAX_JOBS=4 python setup.py build_ext --inplace \
-    --verbose --debug && \
-    uv pip install -e . --no-deps --force-reinstall
-
-# Install main package
-RUN echo "Installing main package..." && \
-    uv pip install -e . --no-deps --force-reinstall
-
-# Install all remaining requirements
-RUN echo "Installing remaining requirements..." && \
-    uv pip install \
-    transformers==4.46.0 \
-    diffusers==0.30.0 \
-    accelerate==1.1.1 \
-    huggingface-hub==0.30.2 \
-    safetensors==0.4.4 \
-    numpy==1.24.4 \
-    scipy==1.14.1 \
-    einops==0.8.0 \
-    opencv-python==4.10.0.84 \
-    imageio==2.36.0 \
-    scikit-image==0.24.0 \
-    rembg==2.0.65 \
-    onnxruntime-gpu \
-    trimesh==4.4.7 \
-    pymeshlab==2022.2.post3 \
-    pygltflib==1.16.3 \
-    xatlas==0.0.9 \
-    omegaconf==2.3.0 \
-    pyyaml==6.0.2 \
-    fastapi==0.115.12 \
-    uvicorn==0.34.3 \
-    pydantic==2.10.6 \
-    tqdm==4.66.5 \
-    psutil==6.0.0 \
-    boto3 \
-    runpod \
-    requests \
-    Pillow || echo "Some packages may have failed, continuing..."
-
-# Try to install remaining packages that might need compilation
-RUN echo "Installing packages that need compilation..." && \
-    (uv pip install realesrgan==0.3.0 || echo "realesrgan failed, skipping") && \
-    (uv pip install basicsr==1.4.2 || echo "basicsr failed, skipping") && \
-    (uv pip install open3d==0.18.0 || echo "open3d failed, skipping") && \
-    (uv pip install torchmetrics==1.6.0 || echo "torchmetrics failed, skipping") && \
-    (uv pip install timm || echo "timm failed, skipping") && \
-    (uv pip install torchdiffeq || echo "torchdiffeq failed, skipping")
-
-# Create weights directory and download models
-RUN mkdir -p /app/weights
-
-# Download Hunyuan3D-2.1 models (do this in build stage to include in final image)
-RUN echo "Downloading Hunyuan3D-2.1 models..." && \
-    python -c "\
-from huggingface_hub import snapshot_download; \
-import os; \
-os.environ['HF_HOME'] = '/app/weights'; \
-snapshot_download( \
-    repo_id='tencent/Hunyuan3D-2.1', \
-    cache_dir='/app/weights', \
-    local_dir='/app/weights/tencent/Hunyuan3D-2.1', \
-    local_dir_use_symlinks=False \
-); \
-print('Models downloaded successfully'); \
-"
+# SKIP MODEL DOWNLOAD - Load at runtime for faster deployment (~22GB saved)
+# Models will be downloaded on first run and cached in Runpod storage
 
 # =============================================================================
-# RUNTIME STAGE - Minimal runtime environment
+# RUNTIME STAGE - Optimized for fast extraction on Runpod
 # =============================================================================
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS runtime
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime AS runtime
 
-# Install only essential runtime dependencies (no build tools)
-RUN apt-get update && apt-get install -y \
-    python3.10 python3.10-venv \
-    libgl1-mesa-dev libglib2.0-0 libsm6 libxrender1 libxext6 \
-    libglu1-mesa-dev libxmu6 libfreetype6-dev libopenblas-dev \
-    libegl1-mesa-dev libxi6 libgconf-2-4 libxrandr2 libxss1 \
-    libgtk-3-dev libgdk-pixbuf2.0-dev libxcomposite1 libxcursor1 \
-    libxdamage1 libxfixes3 libxi6 libxinerama1 libxrandr2 libxss1 \
-    libgconf-2-4 libasound2-dev libpango1.0-dev libatk1.0-dev \
-    libcairo-gobject2 libgtk-3-0 libgdk-pixbuf2.0-0 \
-    ca-certificates \
-    && apt-get autoremove -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /tmp/* \
-    && rm -rf /var/tmp/*
+# Runtime Layer 1: Essential runtime libraries (PyTorch already included)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglu1-mesa libegl1 ca-certificates \
+    libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6 \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set Python environment
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set CUDA environment (runtime only)
-ENV CUDA_HOME=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+# Runtime Layer 2: Environment (tiny layer)  
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH="/opt/conda/lib/python3.11/site-packages:/app" \
+    PYOPENGL_PLATFORM=egl \
+    CUDA_VISIBLE_DEVICES=0
 
 WORKDIR /app
 
-# Copy the entire virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
+# Runtime Layer 3: Python dependencies (using conda from base)
+COPY --from=builder /app/.venv/lib/python3.11/site-packages /opt/conda/lib/python3.11/site-packages
 
-# Copy source code
-COPY --from=builder /app/hy3dgen /app/hy3dgen
-COPY --from=builder /app/api_server.py /app/api_server.py
+# Runtime Layer 4: Core modules (medium size, stable)
+COPY --from=builder /app/hy3dshape /app/hy3dshape
+COPY --from=builder /app/hy3dpaint /app/hy3dpaint
 
-# Copy pre-downloaded models
-COPY --from=builder /app/weights /app/weights
+# Runtime Layer 5: Application files (small, changes most frequently)
+COPY --from=builder /app/api_server.py /app/model_worker.py /app/textureGenPipeline.py /app/
+COPY --from=builder /app/torchvision_fix.py /app/api_models.py /app/constants.py /app/logger_utils.py /app/
 
-# Set virtual environment path
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/.venv/lib/python3.10/site-packages:/app"
+# Runtime Layer 6: Runtime setup (tiny layer)
+RUN mkdir -p /tmp /app/weights && chmod 777 /tmp
 
-# Set application environment variables
-ENV HY3DGEN_MODELS=/app/weights
-ENV PYOPENGL_PLATFORM=egl
-ENV CUDA_VISIBLE_DEVICES=0
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=2 \
+    CMD python -c "import torch; assert torch.cuda.is_available()" || exit 1
 
-# Fix permissions
-RUN chmod -R 755 /app
-
-# Expose API port
 EXPOSE 8080
-
-# Health check with lightweight verification
-HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD python -c "import torch; print('Health check passed')" || exit 1
-
-# Default command
 CMD ["python", "api_server.py"]

@@ -20,6 +20,7 @@ opencv-python==4.10.0.84
 imageio==2.36.0
 scikit-image==0.24.0
 rembg==2.0.65
+onnxruntime-gpu
 realesrgan==0.3.0
 basicsr==1.4.2
 
@@ -49,3 +50,13 @@ torchdiffeq
 # Cloud storage
 boto3
 runpod
+requests
+Pillow
+
+# Build tools
+wheel
+setuptools
+pybind11[global]
+ninja
+packaging
+cmake

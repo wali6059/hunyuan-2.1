@@ -96,9 +96,7 @@ class ModelWorker:
         max_num_view = 6  # can be 6 to 9
         resolution = 512  # can be 768 or 512
         conf = Hunyuan3DPaintConfig(max_num_view, resolution)
-        conf.realesrgan_ckpt_path = "hy3dpaint/ckpt/RealESRGAN_x4plus.pth"
-        conf.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"
-        conf.custom_pipeline = "hy3dpaint/hunyuanpaintpbr"
+        # Use default paths from config - no need to override
         self.paint_pipeline = Hunyuan3DPaintPipeline(conf)
         # clean cache in save_dir
         for file in os.listdir(self.save_dir):
@@ -152,53 +150,83 @@ class ModelWorker:
 
         # Convert to RGBA and remove background if needed
         image = image.convert("RGBA")
-        if image.mode == "RGB":
+        if params.get('remove_background', True) and image.mode == "RGB":
             image = self.rembg(image)
 
-        # Generate mesh 
+        # Extract generation parameters
+        seed = params.get('seed', 1234)
+        octree_resolution = params.get('octree_resolution', 256)
+        num_inference_steps = params.get('num_inference_steps', 5)
+        guidance_scale = params.get('guidance_scale', 5.0)
+        face_count = params.get('face_count', 40000)
+        
+        # Set random seed
+        if seed is not None:
+            import random
+            import numpy as np
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            np.random.seed(seed)
+            random.seed(seed)
+
+        # Generate mesh with parameters
         try:
-            mesh = self.pipeline(image=image)[0]
+            mesh = self.pipeline(
+                image=image,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                octree_resolution=octree_resolution
+            )[0]
             logger.info("---Shape generation takes %s seconds ---" % (time.time() - start_time))
         except Exception as e:
             logger.error(f"Shape generation failed: {e}")
             raise ValueError(f"Failed to generate 3D mesh: {str(e)}")
-
-        # Export initial mesh without texture
         
+        # Apply face reduction if needed
+        if face_count and len(mesh.faces) > face_count:
+            logger.info(f"Reducing faces from {len(mesh.faces)} to {face_count}")
+            # Use trimesh built-in simplification
+            mesh = mesh.simplify_quadratic_decimation(face_count)
+
+        # Export initial mesh
         initial_save_path = os.path.join(self.save_dir, f'{str(uid)}_initial.glb')
         mesh.export(initial_save_path)
         
-        # Generate textured mesh as obj ( as in demo )
-        try:
-            output_mesh_path_obj = os.path.join(self.save_dir, f'{str(uid)}_texturing.obj')
-            textured_path_obj = self.paint_pipeline(
-                mesh_path=initial_save_path,
-                image_path=image,
-                output_mesh_path=output_mesh_path_obj,
-                save_glb=False            
-            )
-            logger.info("---Texture generation takes %s seconds ---" % (time.time() - start_time))
-            logger.info(f"output_mesh_path: {output_mesh_path_obj} textured_path: {textured_path_obj}")
-            # Use the textured GLB as the final output
-            #final_save_path = os.path.join(self.save_dir, f'{str(uid)}_textured.{file_type}')
-            #os.rename(output_mesh_path, final_save_path)
+        # Check if texture generation is requested
+        generate_texture = params.get('texture', True)
+        
+        if generate_texture:
+            # Generate textured mesh as obj (as in demo)
+            try:
+                output_mesh_path_obj = os.path.join(self.save_dir, f'{str(uid)}_texturing.obj')
+                textured_path_obj = self.paint_pipeline(
+                    mesh_path=initial_save_path,
+                    image_path=image,
+                    output_mesh_path=output_mesh_path_obj,
+                    save_glb=False            
+                )
+                logger.info("---Texture generation takes %s seconds ---" % (time.time() - start_time))
+                logger.info(f"output_mesh_path: {output_mesh_path_obj} textured_path: {textured_path_obj}")
 
-            # Convert textured OBJ to GLB using obj2gltf with PBR support
-            print("convert textured OBJ to GLB")
-            glb_path_textured = os.path.join(self.save_dir, f'{str(uid)}_texturing.glb')
-            quick_convert_with_obj2gltf(textured_path_obj, glb_path_textured)
-            # now rename glb_path to uid_textured.glb
-            print("done.")
-            final_save_path = os.path.join(self.save_dir, f'{str(uid)}_textured.glb')
-            os.rename(glb_path_textured, final_save_path)
-            print(f"final_save_path: {final_save_path}")
-
-            
-        except Exception as e:
-            logger.error(f"Texture generation failed: {e}")
-            # Fall back to untextured mesh if texture generation fails
+                # Convert textured OBJ to GLB using obj2gltf with PBR support
+                print("convert textured OBJ to GLB")
+                glb_path_textured = os.path.join(self.save_dir, f'{str(uid)}_texturing.glb')
+                quick_convert_with_obj2gltf(textured_path_obj, glb_path_textured)
+                # now rename glb_path to uid_textured.glb
+                print("done.")
+                final_save_path = os.path.join(self.save_dir, f'{str(uid)}_textured.glb')
+                os.rename(glb_path_textured, final_save_path)
+                print(f"final_save_path: {final_save_path}")
+                
+            except Exception as e:
+                logger.error(f"Texture generation failed: {e}")
+                # Fall back to untextured mesh if texture generation fails
+                final_save_path = initial_save_path
+                logger.warning(f"Using untextured mesh as fallback: {final_save_path}")
+        else:
+            # Use untextured mesh
             final_save_path = initial_save_path
-            logger.warning(f"Using untextured mesh as fallback: {final_save_path}")
+            logger.info("Texture generation skipped by request")
 
         if self.low_vram_mode:
             torch.cuda.empty_cache()
