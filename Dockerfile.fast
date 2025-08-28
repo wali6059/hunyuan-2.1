@@ -32,7 +32,7 @@ RUN uv pip install --system \
 # Layer 5: Build tools and computation libraries (stable)
 RUN uv pip install --system \
     wheel setuptools pybind11[global] ninja packaging cmake \
-    numpy==1.21.6 scipy==1.14.1
+    numpy==1.23.5 scipy==1.11.4
 
 # Layer 6: Computer vision and mesh processing (stable)
 RUN uv pip install --system \
