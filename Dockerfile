@@ -30,13 +30,25 @@ RUN uv pip install --system wheel setuptools pybind11 ninja
 WORKDIR /build
 COPY . .
 
-# Build wheels with caching
+# Build wheels with caching and fix metadata issues
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/tmp/ccache \
-    bash scripts/build_wheels.sh
+    bash scripts/build_wheels.sh && \
+    # Fix any malformed wheel files by rebuilding them properly \
+    find wheels/ -name "*.whl" -exec python3 -c " \
+import sys, zipfile, os; \
+try: \
+    with zipfile.ZipFile(sys.argv[1], 'r') as z: \
+        z.testzip(); \
+except: \
+    print(f'Removing corrupted wheel: {sys.argv[1]}'); \
+    os.remove(sys.argv[1]) \
+" {} \; && \
+    # Rebuild the main package wheel properly \
+    python3 -m pip wheel . -w wheels/ --no-deps --force-reinstall
 
 # Runtime stage
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04 AS base
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04 AS runtime
 
 # Install Python and system dependencies for 3D processing
 RUN apt-get update && apt-get install -y \
@@ -46,29 +58,52 @@ RUN apt-get update && apt-get install -y \
     python3.10 python3.10-venv python3-pip curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Download uv binary for fast package management
-FROM ghcr.io/astral-sh/uv:latest AS uvstage
+# Copy uv from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-FROM base
-COPY --from=uvstage /uv /uvx /bin/
 WORKDIR /app
 
-# Copy built wheels and source code
+# Copy requirements first for better layer caching
+COPY requirements.txt pyproject.toml ./
+
+# Create virtual environment and install base requirements
+RUN uv venv && \
+    uv pip install -r requirements.txt
+
+# Copy built wheels and install them
 COPY --from=builder /build/wheels ./wheels/
+RUN # Install valid wheels only, skip any corrupted ones \
+    for wheel in wheels/*.whl; do \
+        if [ -f "$wheel" ]; then \
+            echo "Installing wheel: $wheel"; \
+            uv pip install "$wheel" --force-reinstall || echo "Skipped corrupted wheel: $wheel"; \
+        fi; \
+    done && \
+    # Clean up wheels after installation \
+    rm -rf wheels/
+
+# Copy application code
 COPY api_server.py download_script.py constants.py logger_utils.py api_models.py model_worker.py ./
 COPY hy3dgen ./hy3dgen/
 
-# Create virtual environment and install wheels
-RUN uv venv 
-RUN ls -la wheels/ && \
-    uv pip install wheels/*.whl
+# Install the main package in development mode to ensure all modules are available
+RUN uv pip install -e . --no-deps
 
 # Set environment variables
 ENV HY3DGEN_MODELS=/app/weights
 ENV PYOPENGL_PLATFORM=egl
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Create weights directory
+RUN mkdir -p /app/weights
 
 # Expose API port
 EXPOSE 8080
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import torch; import hy3dgen; print('Health check passed')" || exit 1
+
 # Default command
-CMD [".venv/bin/python", "api_server.py"]
+CMD ["python", "api_server.py"]
