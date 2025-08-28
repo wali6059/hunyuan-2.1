@@ -59,7 +59,10 @@ RUN pip install \
 
 # Layer 10: ONNX and ML packages (matching original exactly)
 RUN pip install \
-    onnxruntime==1.16.3 torchmetrics==1.6.0 bpy==4.0
+    onnxruntime==1.16.3 torchmetrics==1.6.0
+
+# Layer 10b: Install bpy==4.0 for Python 3.10 with Blender PyPI index
+RUN pip install bpy==4.0.0 --extra-index-url https://download.blender.org/pypi/
 
 # Layer 11: API and cloud packages (for deployment)
 RUN pip install \
