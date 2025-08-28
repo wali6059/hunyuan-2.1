@@ -1,6 +1,9 @@
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+# =============================================================================
+# BUILD STAGE - Contains all build dependencies and compilation
+# =============================================================================
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04 AS builder
 
-# Install comprehensive system dependencies
+# Install comprehensive system dependencies for building
 RUN apt-get update && apt-get install -y \
     build-essential cmake ninja-build pkg-config \
     gcc g++ gdb clang \
@@ -32,9 +35,6 @@ ENV CUDA_NVCC_FLAGS="--allow-unsupported-compiler --expt-relaxed-constexpr --exp
 ENV FORCE_CUDA=1
 ENV TORCH_NVCC_FLAGS="-Xfatbin -compress-all"
 
-# Verify CUDA installation
-RUN nvcc --version && nvidia-smi || echo "CUDA verification complete"
-
 # Copy uv from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -64,9 +64,6 @@ RUN uv pip install \
     packaging \
     cmake
 
-# Verify PyTorch CUDA support
-RUN python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')"
-
 # Install requirements with error handling
 RUN echo "Installing requirements..." && \
     uv pip install -r requirements.txt --no-deps || \
@@ -89,7 +86,7 @@ RUN echo "Building differentiable renderer..." && \
 RUN echo "Installing main package..." && \
     uv pip install -e . --no-deps --force-reinstall
 
-# Install any remaining requirements that might have failed
+# Install all remaining requirements
 RUN echo "Installing remaining requirements..." && \
     uv pip install \
     transformers==4.46.0 \
@@ -130,22 +127,77 @@ RUN echo "Installing packages that need compilation..." && \
     (uv pip install timm || echo "timm failed, skipping") && \
     (uv pip install torchdiffeq || echo "torchdiffeq failed, skipping")
 
-# Verify critical imports with better error handling
-RUN echo "Verifying critical imports..." && \
-    python -c "import torch; print('✓ PyTorch')" && \
-    python -c "import hy3dgen; print('✓ hy3dgen')" && \
-    (python -c "from hy3dgen.rembg import BackgroundRemover; print('✓ BackgroundRemover')" || echo "⚠ BackgroundRemover failed - may need manual ONNX install") && \
-    (python -c "from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline; print('✓ ShapePipeline')" || echo "⚠ ShapePipeline failed") && \
-    (python -c "from hy3dgen.texgen import Hunyuan3DPaintPipeline; print('✓ TexturePipeline')" || echo "⚠ TexturePipeline failed") && \
-    echo "Import verification completed (some may have warnings)"
+# Create weights directory and download models
+RUN mkdir -p /app/weights
 
-# Set environment variables
+# Download Hunyuan3D-2.1 models (do this in build stage to include in final image)
+RUN echo "Downloading Hunyuan3D-2.1 models..." && \
+    python -c "
+from huggingface_hub import snapshot_download
+import os
+os.environ['HF_HOME'] = '/app/weights'
+snapshot_download(
+    repo_id='tencent/Hunyuan3D-2.1',
+    cache_dir='/app/weights',
+    local_dir='/app/weights/tencent/Hunyuan3D-2.1',
+    local_dir_use_symlinks=False
+)
+print('Models downloaded successfully')
+"
+
+# =============================================================================
+# RUNTIME STAGE - Minimal runtime environment
+# =============================================================================
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04 AS runtime
+
+# Install only essential runtime dependencies (no build tools)
+RUN apt-get update && apt-get install -y \
+    python3.10 python3.10-venv \
+    libgl1-mesa-dev libglib2.0-0 libsm6 libxrender1 libxext6 \
+    libglu1-mesa-dev libxmu6 libfreetype6-dev libopenblas-dev \
+    libegl1-mesa-dev libxi6 libgconf-2-4 libxrandr2 libxss1 \
+    libgtk-3-dev libgdk-pixbuf2.0-dev libxcomposite1 libxcursor1 \
+    libxdamage1 libxfixes3 libxi6 libxinerama1 libxrandr2 libxss1 \
+    libgconf-2-4 libasound2-dev libpango1.0-dev libatk1.0-dev \
+    libcairo-gobject2 libgtk-3-0 libgdk-pixbuf2.0-0 \
+    ca-certificates \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Set Python environment
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set CUDA environment (runtime only)
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+
+WORKDIR /app
+
+# Copy the entire virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy source code
+COPY --from=builder /app/hy3dgen /app/hy3dgen
+COPY --from=builder /app/api_server.py /app/api_server.py
+COPY --from=builder /app/setup.py /app/setup.py
+
+# Copy pre-downloaded models
+COPY --from=builder /app/weights /app/weights
+
+# Set virtual environment path
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app/.venv/lib/python3.10/site-packages:/app"
+
+# Set application environment variables
 ENV HY3DGEN_MODELS=/app/weights
 ENV PYOPENGL_PLATFORM=egl
 ENV CUDA_VISIBLE_DEVICES=0
-
-# Create weights directory
-RUN mkdir -p /app/weights
 
 # Fix permissions
 RUN chmod -R 755 /app
@@ -153,9 +205,9 @@ RUN chmod -R 755 /app
 # Expose API port
 EXPOSE 8080
 
-# Enhanced health check with timeout
+# Health check with lightweight verification
 HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
-    CMD timeout 25s python -c "import torch; import hy3dgen; print('Health check passed')" || exit 1
+    CMD python -c "import torch; print('Health check passed')" || exit 1
 
-# Default command with error handling
+# Default command
 CMD ["python", "api_server.py"]

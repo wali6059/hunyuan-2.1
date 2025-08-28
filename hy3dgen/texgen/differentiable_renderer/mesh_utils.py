@@ -14,11 +14,19 @@
 
 import os
 import cv2
-import bpy
 import math
 import numpy as np
+import trimesh
 from io import StringIO
 from typing import Optional, Tuple, Dict, Any
+
+# Optional Blender import for advanced GLB conversion
+try:
+    import bpy
+    HAS_BLENDER = True
+except ImportError:
+    HAS_BLENDER = False
+    print("Warning: Blender not available. Using trimesh for GLB conversion.")
 
 
 def _safe_extract_attribute(obj: Any, attr_path: str, default: Any = None) -> Any:
@@ -199,6 +207,8 @@ def save_mesh(mesh_path, vtx_pos, pos_idx, vtx_uv, uv_idx, texture, metallic=Non
 
 def _setup_blender_scene():
     """Setup Blender scene for conversion."""
+    if not HAS_BLENDER:
+        return
     if "convert" not in bpy.data.scenes:
         bpy.data.scenes.new("convert")
     bpy.context.window.scene = bpy.data.scenes["convert"]
@@ -206,6 +216,8 @@ def _setup_blender_scene():
 
 def _clear_scene_objects():
     """Clear all objects from current Blender scene."""
+    if not HAS_BLENDER:
+        return
     for obj in bpy.context.scene.objects:
         obj.select_set(True)
         bpy.data.objects.remove(obj, do_unlink=True)
@@ -213,6 +225,8 @@ def _clear_scene_objects():
 
 def _select_mesh_objects():
     """Select all mesh objects in scene."""
+    if not HAS_BLENDER:
+        return
     bpy.ops.object.select_all(action="DESELECT")
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH":
@@ -221,7 +235,7 @@ def _select_mesh_objects():
 
 def _merge_vertices_if_needed(merge_vertices: bool):
     """Merge duplicate vertices if requested."""
-    if not merge_vertices:
+    if not HAS_BLENDER or not merge_vertices:
         return
 
     for obj in bpy.context.selected_objects:
@@ -235,6 +249,8 @@ def _merge_vertices_if_needed(merge_vertices: bool):
 
 def _apply_shading(shade_type: str, auto_smooth_angle: float):
     """Apply shading to selected objects."""
+    if not HAS_BLENDER:
+        return
     shading_ops = {
         "SMOOTH": lambda: bpy.ops.object.shade_smooth(),
         "FLAT": lambda: bpy.ops.object.shade_flat(),
@@ -247,6 +263,8 @@ def _apply_shading(shade_type: str, auto_smooth_angle: float):
 
 def _apply_auto_smooth(auto_smooth_angle: float):
     """Apply auto smooth based on Blender version."""
+    if not HAS_BLENDER:
+        return
     angle_rad = math.radians(auto_smooth_angle)
 
     if bpy.app.version < (4, 1, 0):
@@ -257,7 +275,21 @@ def _apply_auto_smooth(auto_smooth_angle: float):
         bpy.ops.object.shade_auto_smooth(angle=angle_rad)
 
 
-def convert_obj_to_glb(
+def convert_obj_to_glb_trimesh(obj_path: str, glb_path: str) -> bool:
+    """Convert OBJ to GLB using trimesh (fallback when Blender unavailable)."""
+    try:
+        # Load OBJ mesh
+        mesh = trimesh.load_mesh(obj_path)
+        
+        # Export as GLB
+        mesh.export(glb_path, file_type='glb')
+        return True
+    except Exception as e:
+        print(f"Trimesh GLB conversion failed: {e}")
+        return False
+
+
+def convert_obj_to_glb_blender(
     obj_path: str,
     glb_path: str,
     shade_type: str = "SMOOTH",
@@ -280,5 +312,22 @@ def convert_obj_to_glb(
         # Export to GLB
         bpy.ops.export_scene.gltf(filepath=glb_path, use_active_scene=True)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"Blender GLB conversion failed: {e}")
         return False
+
+
+def convert_obj_to_glb(
+    obj_path: str,
+    glb_path: str,
+    shade_type: str = "SMOOTH",
+    auto_smooth_angle: float = 60,
+    merge_vertices: bool = False,
+) -> bool:
+    """Convert OBJ file to GLB format. Uses Blender if available, otherwise trimesh."""
+    if HAS_BLENDER:
+        print("Using Blender for GLB conversion")
+        return convert_obj_to_glb_blender(obj_path, glb_path, shade_type, auto_smooth_angle, merge_vertices)
+    else:
+        print("Using trimesh for GLB conversion (Blender not available)")
+        return convert_obj_to_glb_trimesh(obj_path, glb_path)
