@@ -14,11 +14,26 @@
 
 import os
 import cv2
-import bpy
 import math
 import numpy as np
 from io import StringIO
 from typing import Optional, Tuple, Dict, Any
+
+# Try to import Blender, fallback to trimesh for GLB conversion
+try:
+    import bpy
+    HAS_BLENDER = True
+    print("Blender (bpy) imported successfully")
+except ImportError:
+    print("Bpy IO CAN NOT BE Imported!!!")
+    HAS_BLENDER = False
+    try:
+        import trimesh
+        HAS_TRIMESH = True
+        print("Using trimesh as fallback for GLB conversion")
+    except ImportError:
+        HAS_TRIMESH = False
+        print("Warning: Neither Blender nor trimesh available for GLB conversion")
 
 
 def _safe_extract_attribute(obj: Any, attr_path: str, default: Any = None) -> Any:
@@ -199,6 +214,8 @@ def save_mesh(mesh_path, vtx_pos, pos_idx, vtx_uv, uv_idx, texture, metallic=Non
 
 def _setup_blender_scene():
     """Setup Blender scene for conversion."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     if "convert" not in bpy.data.scenes:
         bpy.data.scenes.new("convert")
     bpy.context.window.scene = bpy.data.scenes["convert"]
@@ -206,6 +223,8 @@ def _setup_blender_scene():
 
 def _clear_scene_objects():
     """Clear all objects from current Blender scene."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     for obj in bpy.context.scene.objects:
         obj.select_set(True)
         bpy.data.objects.remove(obj, do_unlink=True)
@@ -213,6 +232,8 @@ def _clear_scene_objects():
 
 def _select_mesh_objects():
     """Select all mesh objects in scene."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     bpy.ops.object.select_all(action="DESELECT")
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH":
@@ -221,6 +242,8 @@ def _select_mesh_objects():
 
 def _merge_vertices_if_needed(merge_vertices: bool):
     """Merge duplicate vertices if requested."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     if not merge_vertices:
         return
 
@@ -235,6 +258,8 @@ def _merge_vertices_if_needed(merge_vertices: bool):
 
 def _apply_shading(shade_type: str, auto_smooth_angle: float):
     """Apply shading to selected objects."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     shading_ops = {
         "SMOOTH": lambda: bpy.ops.object.shade_smooth(),
         "FLAT": lambda: bpy.ops.object.shade_flat(),
@@ -247,6 +272,8 @@ def _apply_shading(shade_type: str, auto_smooth_angle: float):
 
 def _apply_auto_smooth(auto_smooth_angle: float):
     """Apply auto smooth based on Blender version."""
+    if not HAS_BLENDER:
+        raise ImportError("Blender not available")
     angle_rad = math.radians(auto_smooth_angle)
 
     if bpy.app.version < (4, 1, 0):
@@ -264,21 +291,41 @@ def convert_obj_to_glb(
     auto_smooth_angle: float = 60,
     merge_vertices: bool = False,
 ) -> bool:
-    """Convert OBJ file to GLB format using Blender."""
-    try:
-        _setup_blender_scene()
-        _clear_scene_objects()
+    """Convert OBJ file to GLB format using Blender or trimesh fallback."""
+    
+    # Try Blender first if available
+    if HAS_BLENDER:
+        try:
+            _setup_blender_scene()
+            _clear_scene_objects()
 
-        # Import OBJ file
-        bpy.ops.wm.obj_import(filepath=obj_path)
-        _select_mesh_objects()
+            # Import OBJ file
+            bpy.ops.wm.obj_import(filepath=obj_path)
+            _select_mesh_objects()
 
-        # Process meshes
-        _merge_vertices_if_needed(merge_vertices)
-        _apply_shading(shade_type, auto_smooth_angle)
+            # Process meshes
+            _merge_vertices_if_needed(merge_vertices)
+            _apply_shading(shade_type, auto_smooth_angle)
 
-        # Export to GLB
-        bpy.ops.export_scene.gltf(filepath=glb_path, use_active_scene=True)
-        return True
-    except Exception:
-        return False
+            # Export to GLB
+            bpy.ops.export_scene.gltf(filepath=glb_path, use_active_scene=True)
+            return True
+        except Exception as e:
+            print(f"Blender conversion failed: {e}, trying trimesh fallback...")
+    
+    # Fallback to trimesh
+    if HAS_TRIMESH:
+        try:
+            # Load OBJ with trimesh
+            mesh = trimesh.load(obj_path)
+            
+            # Export as GLB
+            mesh.export(glb_path)
+            print(f"Successfully converted {obj_path} to {glb_path} using trimesh")
+            return True
+        except Exception as e:
+            print(f"Trimesh conversion failed: {e}")
+            return False
+    
+    print("Warning: No GLB conversion method available (neither Blender nor trimesh)")
+    return False
