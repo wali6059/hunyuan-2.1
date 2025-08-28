@@ -17,7 +17,8 @@
       "Bash(cp:*)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
-      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/**)"
+      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/**)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": [],

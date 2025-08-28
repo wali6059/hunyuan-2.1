@@ -30,6 +30,10 @@ def upload_to_r2(file_path, object_name):
     """
     Upload a file to Cloudflare R2 bucket and return a presigned download URL.
     """
+    # Check if file exists before attempting upload
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Generated file not found: {file_path}")
+        
     with open(file_path, 'rb') as file:
         s3.upload_fileobj(
             Fileobj=file,
@@ -52,15 +56,15 @@ def worker_fn(input_data):
     try:
         print(f"Worker input: {input_data}")
         
-        # Get parameters with defaults (matching api_models.py structure)
-        image_base64 = input_data.get('image')
-        remove_background = input_data.get('remove_background', True)
-        texture = input_data.get('texture', True)
-        seed = input_data.get('seed', 1234)
-        octree_resolution = input_data.get('octree_resolution', 256)
-        num_inference_steps = input_data.get('num_inference_steps', 5)
-        guidance_scale = input_data.get('guidance_scale', 5.0)
-        face_count = input_data.get('face_count', 40000)
+        # Get parameters with defaults (matching api_models.py structure exactly)
+        image_base64 = input_data.get('image')  # str, required
+        remove_background = bool(input_data.get('remove_background', True))  # bool, default True
+        texture = bool(input_data.get('texture', False))  # bool, default False (matches api_models.py!)
+        seed = int(input_data.get('seed', 1234))  # int, default 1234
+        octree_resolution = int(input_data.get('octree_resolution', 256))  # int, default 256
+        num_inference_steps = int(input_data.get('num_inference_steps', 5))  # int, default 5
+        guidance_scale = float(input_data.get('guidance_scale', 5.0))  # float, default 5.0
+        face_count = int(input_data.get('face_count', 40000))  # int, default 40000
         
         if not image_base64:
             return {"error": "No image provided"}
@@ -134,6 +138,11 @@ if __name__ == "__main__":
     access_key_id = os.getenv('CF_R2_ACCESS_KEY', '')
     secret_access_key = os.getenv('CF_R2_SECRET_KEY', '')
     bucket_name = os.getenv('CF_R2_BUCKET', 'hunyuan3d')
+    
+    # Validate required environment variables
+    if not all([account_id, access_key_id, secret_access_key]):
+        print("ERROR: Missing required R2 credentials. Set CF_R2_ACCOUNT_ID, CF_R2_ACCESS_KEY, CF_R2_SECRET_KEY")
+        sys.exit(1)
 
     # Initialize S3 client for R2
     s3 = boto3.client(

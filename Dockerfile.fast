@@ -20,42 +20,39 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
-# Layer 3: Create virtual environment
-RUN uv venv
-ENV VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH="/app/.venv/lib/python3.11/site-packages:/app"
+# Layer 3: Use system Python (matches PyTorch base)
+ENV PYTHONPATH="/opt/conda/lib/python3.11/site-packages:/app"
 
 # Layer 4: Core ML dependencies (stable layer)
-RUN uv pip install \
+RUN uv pip install --system \
     transformers==4.46.0 diffusers==0.30.0 accelerate==1.1.1 \
     huggingface-hub==0.30.2 safetensors==0.4.4 einops==0.8.0
 
 # Layer 5: Build tools and computation libraries (stable)
-RUN uv pip install \
+RUN uv pip install --system \
     wheel setuptools pybind11[global] ninja packaging cmake \
     numpy==1.24.4 scipy==1.14.1
 
 # Layer 6: Computer vision and mesh processing (stable)
-RUN uv pip install \
+RUN uv pip install --system \
     opencv-python==4.10.0.84 imageio==2.36.0 scikit-image==0.24.0 \
     trimesh==4.4.7 pygltflib==1.16.3
 
 # Layer 7: Specialized ML packages (medium stability)
-RUN uv pip install \
+RUN uv pip install --system \
     rembg==2.0.65 onnxruntime-gpu xatlas==0.0.9
 
 # Layer 8: Configuration and utility packages (stable)
-RUN uv pip install \
+RUN uv pip install --system \
     omegaconf==2.3.0 pyyaml==6.0.2 tqdm==4.66.5 psutil==6.0.0
 
 # Layer 9: API and cloud packages (stable)
-RUN uv pip install \
+RUN uv pip install --system \
     fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.10.6 \
     boto3 runpod requests Pillow
 
 # Layer 10: Optional packages (separate layer for failure tolerance)
-RUN uv pip install pymeshlab==2022.2.post3 realesrgan==0.3.0 \
+RUN uv pip install --system pymeshlab==2022.2.post3 realesrgan==0.3.0 \
     basicsr==1.4.2 open3d==0.18.0 torchmetrics==1.6.0 timm torchdiffeq \
     || echo "Some optional packages failed"
 
@@ -67,8 +64,12 @@ COPY api_models.py constants.py logger_utils.py ./
 
 # Layer 12: Install pre-built local wheels (SUPER FAST - no compilation!)
 COPY wheels/ ./wheels/
-RUN uv pip install ./wheels/*.whl --no-deps --force-reinstall && \
-    echo "Installed pre-built wheels: $(ls ./wheels/)"
+RUN if [ -f ./wheels/*.whl ]; then \
+        uv pip install --system ./wheels/*.whl --no-deps --force-reinstall && \
+        echo "Installed pre-built wheels: $(ls ./wheels/)" ; \
+    else \
+        echo "Warning: No wheels found in ./wheels/" ; \
+    fi
 
 # =============================================================================
 # RUNTIME STAGE - Optimized for fast extraction on Runpod
@@ -90,8 +91,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Runtime Layer 3: Python dependencies (using conda from base)
-COPY --from=builder /app/.venv/lib/python3.11/site-packages /opt/conda/lib/python3.11/site-packages
+# Runtime Layer 3: Python dependencies (already in conda from builder)
+# Dependencies already installed via --system in builder stage
 
 # Runtime Layer 4: Core modules (medium size, stable)
 COPY --from=builder /app/hy3dshape /app/hy3dshape

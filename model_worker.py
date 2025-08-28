@@ -10,7 +10,7 @@ from io import BytesIO
 from PIL import Image
 import torch
 
-# Apply torchvision compatibility fix before other imports
+# FIXED: Apply torchvision compatibility fix and set paths like original demo
 import sys
 sys.path.insert(0, './hy3dshape')
 sys.path.insert(0, './hy3dpaint')
@@ -26,17 +26,45 @@ except Exception as e:
 from hy3dshape import Hunyuan3DDiTFlowMatchingPipeline
 from hy3dshape.rembg import BackgroundRemover
 from hy3dshape.utils import logger
-from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
-from hy3dpaint.convert_utils import create_glb_with_pbr_materials
+# Import texture pipeline - using relative import from root
+import os
+import sys
+
+# Ensure we can import textureGenPipeline correctly
+try:
+    from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
+except ImportError:
+    # Try from hy3dpaint directory if root import fails
+    sys.path.insert(0, os.path.join(os.getcwd(), 'hy3dpaint'))
+    from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
+# Import GLB conversion utilities - path already set above
+
+try:
+    from hy3dpaint.convert_utils import create_glb_with_pbr_materials
+    HAS_GLB_UTILS = True
+except ImportError:
+    print("Warning: GLB conversion utils not found, using basic trimesh export")
+    HAS_GLB_UTILS = False
 
 
 def quick_convert_with_obj2gltf(obj_path: str, glb_path: str):
-    textures = {
-        'albedo': obj_path.replace('.obj', '.jpg'),
-        'metallic': obj_path.replace('.obj', '_metallic.jpg'),
-        'roughness': obj_path.replace('.obj', '_roughness.jpg')
-        }
-    create_glb_with_pbr_materials(obj_path, textures, glb_path)
+    """Convert OBJ to GLB with PBR materials if possible"""
+    if HAS_GLB_UTILS:
+        try:
+            textures = {
+                'albedo': obj_path.replace('.obj', '.jpg'),
+                'metallic': obj_path.replace('.obj', '_metallic.jpg'),
+                'roughness': obj_path.replace('.obj', '_roughness.jpg')
+            }
+            create_glb_with_pbr_materials(obj_path, textures, glb_path)
+            return
+        except Exception as e:
+            print(f"Warning: PBR GLB conversion failed: {e}, using basic conversion")
+    
+    # Fallback to basic trimesh conversion
+    import trimesh
+    mesh = trimesh.load(obj_path)
+    mesh.export(glb_path)
 
 
 def load_image_from_base64(image):
@@ -49,7 +77,17 @@ def load_image_from_base64(image):
     Returns:
         PIL.Image: Loaded image
     """
-    return Image.open(BytesIO(base64.b64decode(image)))
+    if not isinstance(image, str):
+        raise TypeError(f"Expected string, got {type(image)}")
+    
+    try:
+        # Handle data URLs (e.g., "data:image/png;base64,...")
+        if image.startswith('data:'):
+            image = image.split(',')[1]
+        
+        return Image.open(BytesIO(base64.b64decode(image)))
+    except Exception as e:
+        raise ValueError(f"Failed to decode base64 image: {e}")
 
 
 class ModelWorker:
@@ -98,9 +136,13 @@ class ModelWorker:
         conf = Hunyuan3DPaintConfig(max_num_view, resolution)
         # Use default paths from config - no need to override
         self.paint_pipeline = Hunyuan3DPaintPipeline(conf)
-        # clean cache in save_dir
-        for file in os.listdir(self.save_dir):
-            os.remove(os.path.join(self.save_dir, file))
+        # clean cache in save_dir (create directory if not exists)
+        os.makedirs(self.save_dir, exist_ok=True)
+        if os.path.exists(self.save_dir):
+            for file in os.listdir(self.save_dir):
+                file_path = os.path.join(self.save_dir, file)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
             
     def get_queue_length(self):
         """
@@ -148,19 +190,21 @@ class ModelWorker:
         else:
             raise ValueError("No input image provided")
 
-        # Convert to RGBA and remove background if needed
-        image = image.convert("RGBA")
-        if params.get('remove_background', True) and image.mode == "RGB":
+        # Remove background if needed (do this before RGBA conversion)
+        if params.get('remove_background', True):
             image = self.rembg(image)
-
-        # Extract generation parameters
-        seed = params.get('seed', 1234)
-        octree_resolution = params.get('octree_resolution', 256)
-        num_inference_steps = params.get('num_inference_steps', 5)
-        guidance_scale = params.get('guidance_scale', 5.0)
-        face_count = params.get('face_count', 40000)
         
-        # Set random seed
+        # Convert to RGBA after background removal
+        image = image.convert("RGBA")
+
+        # Extract generation parameters with type enforcement
+        seed = int(params.get('seed', 1234))
+        octree_resolution = int(params.get('octree_resolution', 256))
+        num_inference_steps = int(params.get('num_inference_steps', 5))
+        guidance_scale = float(params.get('guidance_scale', 5.0))
+        face_count = int(params.get('face_count', 40000))
+        
+        # Set random seed (seed is now guaranteed to be int)
         if seed is not None:
             import random
             import numpy as np
@@ -171,29 +215,37 @@ class ModelWorker:
 
         # Generate mesh with parameters
         try:
-            mesh = self.pipeline(
+            result = self.pipeline(
                 image=image,
                 num_inference_steps=num_inference_steps,
                 guidance_scale=guidance_scale,
                 octree_resolution=octree_resolution
-            )[0]
+            )
+            
+            # FIXED: Match original demo.py - simple [0] extraction like demo
+            # Original: mesh = pipeline_shapegen(image=image)[0]
+            mesh = result[0]
+                
             logger.info("---Shape generation takes %s seconds ---" % (time.time() - start_time))
         except Exception as e:
             logger.error(f"Shape generation failed: {e}")
             raise ValueError(f"Failed to generate 3D mesh: {str(e)}")
         
-        # Apply face reduction if needed
-        if face_count and len(mesh.faces) > face_count:
+        # Apply face reduction if needed (ensure mesh has faces attribute)
+        if face_count and hasattr(mesh, 'faces') and len(mesh.faces) > face_count:
             logger.info(f"Reducing faces from {len(mesh.faces)} to {face_count}")
             # Use trimesh built-in simplification
-            mesh = mesh.simplify_quadratic_decimation(face_count)
+            try:
+                mesh = mesh.simplify_quadratic_decimation(face_count)
+            except Exception as e:
+                logger.warning(f"Face reduction failed: {e}, keeping original mesh")
 
         # Export initial mesh
         initial_save_path = os.path.join(self.save_dir, f'{str(uid)}_initial.glb')
         mesh.export(initial_save_path)
         
-        # Check if texture generation is requested
-        generate_texture = params.get('texture', True)
+        # Check if texture generation is requested (default False to match api_models.py)
+        generate_texture = bool(params.get('texture', False))
         
         if generate_texture:
             # Generate textured mesh as obj (as in demo)

@@ -19,13 +19,14 @@ import trimesh
 import numpy as np
 from PIL import Image
 from typing import List
-from hy3dpaint.DifferentiableRenderer.MeshRender import MeshRender
-from hy3dpaint.utils.simplify_mesh_utils import remesh_mesh
-from hy3dpaint.utils.multiview_utils import multiviewDiffusionNet
-from hy3dpaint.utils.pipeline_utils import ViewProcessor
-from hy3dpaint.utils.image_super_utils import imageSuperNet
-from hy3dpaint.utils.uvwrap_utils import mesh_uv_wrap
-from hy3dpaint.DifferentiableRenderer.mesh_utils import convert_obj_to_glb
+# FIXED: Use relative imports like the original
+from DifferentiableRenderer.MeshRender import MeshRender
+from utils.simplify_mesh_utils import remesh_mesh
+from utils.multiview_utils import multiviewDiffusionNet
+from utils.pipeline_utils import ViewProcessor
+from utils.image_super_utils import imageSuperNet
+from utils.uvwrap_utils import mesh_uv_wrap
+from DifferentiableRenderer.mesh_utils import convert_obj_to_glb
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -38,11 +39,16 @@ class Hunyuan3DPaintConfig:
     def __init__(self, max_num_view, resolution):
         self.device = "cuda"
 
-        self.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"
-        self.custom_pipeline = "hunyuanpaintpbr"
+# Configuration paths for deployment structure
+        self.multiview_cfg_path = "hy3dpaint/cfgs/hunyuan-paint-pbr.yaml"  
+        self.custom_pipeline = "hy3dpaint/hunyuanpaintpbr"  # Keep full path for deployment
         self.multiview_pretrained_path = "tencent/Hunyuan3D-2.1"
         self.dino_ckpt_path = "facebook/dinov2-giant"
+        # RealESRGAN checkpoint - match original path structure
         self.realesrgan_ckpt_path = "ckpt/RealESRGAN_x4plus.pth"
+        if not os.path.exists(self.realesrgan_ckpt_path):
+            print(f"Warning: RealESRGAN checkpoint not found at {self.realesrgan_ckpt_path}")
+            self.realesrgan_ckpt_path = None
 
         self.raster_mode = "cr"
         self.bake_mode = "back_sample"
@@ -92,15 +98,22 @@ class Hunyuan3DPaintPipeline:
     @torch.no_grad()
     def __call__(self, mesh_path=None, image_path=None, output_mesh_path=None, use_remesh=True, save_glb=True):
         """Generate texture for 3D mesh using multiview diffusion"""
-        # Ensure image_prompt is a list
+        # Handle different image input types consistently
         if isinstance(image_path, str):
+            # File path string
             image_prompt = Image.open(image_path)
         elif isinstance(image_path, Image.Image):
+            # PIL Image object
             image_prompt = image_path
-        if not isinstance(image_prompt, List):
-            image_prompt = [image_prompt]
+        elif isinstance(image_path, list):
+            # Already a list of images
+            image_prompt = image_path
         else:
-            image_prompt = image_path
+            raise ValueError(f"Unsupported image_path type: {type(image_path)}")
+            
+        # Ensure it's a list
+        if not isinstance(image_prompt, list):
+            image_prompt = [image_prompt]
 
         # Process mesh
         path = os.path.dirname(mesh_path)

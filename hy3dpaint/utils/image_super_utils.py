@@ -18,24 +18,44 @@ from PIL import Image
 
 class imageSuperNet:
     def __init__(self, config) -> None:
-        from realesrgan import RealESRGANer
-        from basicsr.archs.rrdbnet_arch import RRDBNet
+        # Check if RealESRGAN is available
+        if config.realesrgan_ckpt_path is None or not hasattr(config, 'realesrgan_ckpt_path'):
+            print("Warning: RealESRGAN not available, using simple upscaling")
+            self.upsampler = None
+            return
+            
+        try:
+            from realesrgan import RealESRGANer
+            from basicsr.archs.rrdbnet_arch import RRDBNet
 
-        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
-        upsampler = RealESRGANer(
-            scale=4,
-            model_path=config.realesrgan_ckpt_path,
-            dni_weight=None,
-            model=model,
-            tile=0,
-            tile_pad=10,
-            pre_pad=0,
-            half=True,
-            gpu_id=None,
-        )
-        self.upsampler = upsampler
+            model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+            upsampler = RealESRGANer(
+                scale=4,
+                model_path=config.realesrgan_ckpt_path,
+                dni_weight=None,
+                model=model,
+                tile=0,
+                tile_pad=10,
+                pre_pad=0,
+                half=True,
+                gpu_id=None,
+            )
+            self.upsampler = upsampler
+        except Exception as e:
+            print(f"Warning: Failed to initialize RealESRGAN: {e}")
+            self.upsampler = None
 
     def __call__(self, image):
-        output, _ = self.upsampler.enhance(np.array(image))
-        output = Image.fromarray(output)
-        return output
+        if self.upsampler is None:
+            # Fallback to simple PIL upscaling
+            width, height = image.size
+            return image.resize((width * 2, height * 2), Image.LANCZOS)
+        
+        try:
+            output, _ = self.upsampler.enhance(np.array(image))
+            output = Image.fromarray(output)
+            return output
+        except Exception as e:
+            print(f"Warning: RealESRGAN enhancement failed: {e}, using fallback")
+            width, height = image.size
+            return image.resize((width * 2, height * 2), Image.LANCZOS)
