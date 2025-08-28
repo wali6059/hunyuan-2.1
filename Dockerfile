@@ -1,4 +1,34 @@
 # =============================================================================
+# WHEEL BUILDING STAGE - Pre-compile CUDA extensions into wheels
+# =============================================================================
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel AS wheel-builder
+
+# Install build essentials for wheel compilation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake ninja-build pkg-config gcc g++ \
+    git wget curl ca-certificates \
+    && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Environment for CUDA compilation
+ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" \
+    FORCE_CUDA=1
+
+# Install wheel building tools
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN uv pip install --system wheel setuptools pybind11[global] ninja packaging cmake
+
+# Copy only the CUDA extension source code
+WORKDIR /app
+COPY hy3dpaint/custom_rasterizer/ ./hy3dpaint/custom_rasterizer/
+
+# Build wheels for custom_rasterizer
+RUN cd hy3dpaint/custom_rasterizer && \
+    MAX_JOBS=4 python setup.py bdist_wheel && \
+    mkdir -p /wheels && \
+    cp dist/*.whl /wheels/ && \
+    echo "Built wheel: $(ls /wheels/)"
+
+# =============================================================================
 # BUILD STAGE - Using pre-built PyTorch base for fast deployment
 # =============================================================================
 FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-devel AS builder
@@ -65,10 +95,10 @@ COPY hy3dpaint/ ./hy3dpaint/
 COPY api_server.py model_worker.py textureGenPipeline.py torchvision_fix.py ./
 COPY api_models.py constants.py logger_utils.py ./
 
-# Layer 15: CUDA extensions (expensive build, separate layer)
-RUN cd hy3dpaint/custom_rasterizer && \
-    MAX_JOBS=2 python setup.py build_ext --inplace && \
-    uv pip install -e . --no-deps --force-reinstall
+# Layer 15: Install pre-built wheels (fast installation)
+COPY --from=wheel-builder /wheels /app/wheels
+RUN uv pip install /app/wheels/*.whl --no-deps --force-reinstall && \
+    echo "Installed wheels: $(ls /app/wheels/)"
 
 # SKIP MODEL DOWNLOAD - Load at runtime for faster deployment (~22GB saved)
 # Models will be downloaded on first run and cached in Runpod storage
@@ -95,6 +125,9 @@ WORKDIR /app
 
 # Runtime Layer 3: Python dependencies (using conda from base)
 COPY --from=builder /app/.venv/lib/python3.11/site-packages /opt/conda/lib/python3.11/site-packages
+
+# Runtime Layer 3.5: Copy wheels to host for extraction
+COPY --from=wheel-builder /wheels /wheels
 
 # Runtime Layer 4: Core modules (medium size, stable)
 COPY --from=builder /app/hy3dshape /app/hy3dshape

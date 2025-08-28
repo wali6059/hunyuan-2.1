@@ -15,6 +15,7 @@
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1/hy3dpaint/**)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1/hy3dpaint/**)",
       "Bash(cp:*)",
+      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)"
     ],
     "deny": [],
