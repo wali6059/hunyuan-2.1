@@ -1,0 +1,60 @@
+2025-08-28T11:09:47.858676899Z Torchvision version: 0.20.1+cu121
+2025-08-28T11:09:47.858722728Z torchvision.transforms.functional_tensor not found, applying compatibility fix...
+2025-08-28T11:09:47.858729008Z Applied compatibility fix: created functional_tensor mock module
+2025-08-28T11:09:48.386588233Z Torchvision version: 0.20.1+cu121
+2025-08-28T11:09:48.386610256Z torchvision.transforms.functional_tensor is available
+2025-08-28T11:09:48.738246824Z The cache for model files in Transformers v4.22.0 has been updated. Migrating your old cache. This is a one-time only operation. You can interrupt this and resume the migration later on by calling `transformers.utils.move_cache()`.
+2025-08-28T11:09:48.738977244Z 0it [00:00, ?it/s]0it [00:00, ?it/s]
+2025-08-28T11:10:30.149679093Z Bpy IO CAN NOT BE Imported!!!
+2025-08-28T11:10:30.149724992Z Using trimesh as fallback for GLB conversion
+2025-08-28T11:10:30.149734266Z InPaint Function CAN NOT BE Imported!!!
+2025-08-28T11:10:30.755754024Z Initializing Hunyuan3D 2.1 models...
+2025-08-28T11:10:30.755786924Z 2025-08-28 11:10:30,755 - hy3dgen.shapgen - INFO - Loading the model tencent/Hunyuan3D-2.1 on worker 57a7d9 ...
+2025-08-28T11:10:30.755806042Z model_worker.py     :125  2025-08-28 11:10:30,755 Loading the model tencent/Hunyuan3D-2.1 on worker 57a7d9 ...
+2025-08-28T11:10:30.756149119Z Downloading data from 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx' to file '/root/.u2net/u2net.onnx'.
+2025-08-28T11:10:33.237892947Z   0%|                                               | 0.00/176M [00:00<?, ?B/s]  0%|                                       | 126k/176M [00:00<02:22, 1.24MB/s]  0%|▏                                      | 772k/176M [00:00<00:40, 4.29MB/s]  2%|▊                                     | 3.54M/176M [00:00<00:11, 14.9MB/s]  7%|██▋                                   | 12.5M/176M [00:00<00:04, 36.0MB/s] 15%|█████▋                                | 26.2M/176M [00:00<00:02, 67.5MB/s] 20%|███████▋                              | 35.9M/176M [00:00<00:01, 76.6MB/s] 26%|█████████▊                            | 45.5M/176M [00:00<00:01, 82.7MB/s] 33%|████████████▌                         | 57.9M/176M [00:00<00:01, 95.3MB/s] 38%|██████████████▌                       | 67.6M/176M [00:00<00:01, 95.2MB/s] 44%|████████████████▋                     | 77.3M/176M [00:01<00:01, 95.3MB/s] 49%|██████████████████▊                   | 86.9M/176M [00:01<00:00, 95.5MB/s] 55%|████████████████████▊                 | 96.5M/176M [00:01<00:00, 93.7MB/s] 60%|███████████████████████▌               | 106M/176M [00:01<00:00, 94.5MB/s] 66%|█████████████████████████▋             | 116M/176M [00:01<00:00, 95.3MB/s] 71%|███████████████████████████▊           | 126M/176M [00:01<00:00, 96.0MB/s] 77%|██████████████████████████████         | 135M/176M [00:01<00:00, 96.5MB/s] 83%|████████████████████████████████▏      | 145M/176M [00:01<00:00, 96.8MB/s] 88%|██████████████████████████████████▎    | 155M/176M [00:01<00:00, 95.5MB/s] 94%|████████████████████████████████████▌  | 165M/176M [00:01<00:00, 96.5MB/s] 99%|██████████████████████████████████████▋| 175M/176M [00:02<00:00, 97.5MB/s]  0%|                                               | 0.00/176M [00:00<?, ?B/s]100%|███████████████████████████████████████| 176M/176M [00:00<00:00, 1.58TB/s]
+2025-08-28T11:10:33.584375305Z [1;31m2025-08-28 11:10:33.584277037 [E:onnxruntime:Default, provider_bridge_ort.cc:2195 TryGetProviderInfo_CUDA] /onnxruntime_src/onnxruntime/core/session/provider_bridge_ort.cc:1778 onnxruntime::Provider& onnxruntime::ProviderLibrary::Get() [ONNXRuntimeError] : 1 : FAIL : Failed to load library libonnxruntime_providers_cuda.so with error: libnvrtc.so.12: cannot open shared object file: No such file or directory
+2025-08-28T11:10:33.584394874Z [m
+2025-08-28T11:10:33.838182428Z 2025-08-28 11:10:33,838 - hy3dgen.shapgen - INFO - Try to load model from local path: /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1
+2025-08-28T11:10:33.838211191Z utils.py            :100  2025-08-28 11:10:33,838 Try to load model from local path: /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1
+2025-08-28T11:10:33.838228087Z 2025-08-28 11:10:33,838 - hy3dgen.shapgen - INFO - Model path not exists, try to download from huggingface
+2025-08-28T11:10:33.838236369Z utils.py            :102  2025-08-28 11:10:33,838 Model path not exists, try to download from huggingface
+2025-08-28T11:10:34.991165683Z Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:00<00:00,  1.60it/s]Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2025-08-28T11:10:34.991186605Z file_download.py    :1670 2025-08-28 11:10:34,991 Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2025-08-28T11:11:39.579027764Z Fetching 2 files: 100%|██████████| 2/2 [01:05<00:00, 38.38s/it]Fetching 2 files: 100%|██████████| 2/2 [01:05<00:00, 32.72s/it]
+2025-08-28T11:11:39.582357407Z 2025-08-28 11:11:39,582 - hy3dgen.shapgen - INFO - Loading model from /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1/model.fp16.ckpt
+2025-08-28T11:11:39.582377638Z pipelines.py        :154  2025-08-28 11:11:39,582 Loading model from /app/weights/tencent/Hunyuan3D-2.1/hunyuan3d-dit-v2-1/model.fp16.ckpt
+2025-08-28T11:11:47.635990556Z using moe
+2025-08-28T11:11:49.225605732Z using moe
+2025-08-28T11:11:50.811606636Z using moe
+2025-08-28T11:11:52.434162375Z using moe
+2025-08-28T11:11:54.343992112Z using moe
+2025-08-28T11:11:55.883470856Z using moe
+2025-08-28T11:11:57.522746377Z PointCrossAttentionEncoder INFO: pc_sharpedge_size is zero
+2025-08-28T11:12:01.980632788Z Traceback (most recent call last):
+2025-08-28T11:12:01.980667189Z   File "/app/api_server.py", line 158, in <module>
+2025-08-28T11:12:01.980670725Z     init_models()
+2025-08-28T11:12:01.980674240Z   File "/app/api_server.py", line 122, in init_models
+2025-08-28T11:12:01.980676904Z     worker = ModelWorker(
+2025-08-28T11:12:01.980680119Z              ^^^^^^^^^^^^
+2025-08-28T11:12:01.980682693Z   File "/app/model_worker.py", line 131, in __init__
+2025-08-28T11:12:01.980685627Z     self.pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
+2025-08-28T11:12:01.980691446Z                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T11:12:01.980720600Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 220, in from_pretrained
+2025-08-28T11:12:01.980750134Z     return cls.from_single_file(
+2025-08-28T11:12:01.980782393Z            ^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T11:12:01.980785267Z   File "/app/./hy3dshape/hy3dshape/utils/utils.py", line 83, in wrapper
+2025-08-28T11:12:01.980817756Z     result = func(*args, **kwargs)
+2025-08-28T11:12:01.980853300Z              ^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T11:12:01.980871447Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 178, in from_single_file
+2025-08-28T11:12:01.980909785Z     scheduler = instantiate_from_config(config['scheduler'])
+2025-08-28T11:12:01.980967742Z                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T11:12:01.980975684Z   File "/app/./hy3dshape/hy3dshape/pipelines.py", line 126, in instantiate_from_config
+2025-08-28T11:12:01.981061573Z     instance = cls(**kwargs)
+2025-08-28T11:12:01.981072890Z                ^^^^^^^^^^^^^
+2025-08-28T11:12:01.981075484Z   File "/opt/conda/lib/python3.11/site-packages/diffusers/configuration_utils.py", line 653, in inner_init
+2025-08-28T11:12:01.981152510Z     init(self, *args, **init_kwargs)
+2025-08-28T11:12:01.981169906Z   File "/app/./hy3dshape/hy3dshape/schedulers.py", line 86, in __init__
+2025-08-28T11:12:01.981206231Z     timesteps = torch.from_numpy(timesteps).to(dtype=torch.float32)
+2025-08-28T11:12:01.981243587Z                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2025-08-28T11:12:01.981270568Z TypeError: expected np.ndarray (got numpy.ndarray)

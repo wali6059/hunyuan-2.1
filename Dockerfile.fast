@@ -80,6 +80,7 @@ FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglu1-mesa libegl1 ca-certificates \
     libglib2.0-0 libsm6 libxrender1 libxext6 libfreetype6 \
+    cuda-nvrtc-12-1 cuda-cccl-12-1 \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Runtime Layer 2: Environment (tiny layer)  

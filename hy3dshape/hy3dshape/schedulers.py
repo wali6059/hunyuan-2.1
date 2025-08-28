@@ -83,7 +83,7 @@ class FlowMatchEulerDiscreteScheduler(SchedulerMixin, ConfigMixin):
         use_dynamic_shifting=False,
     ):
         timesteps = np.linspace(1, num_train_timesteps, num_train_timesteps, dtype=np.float32).copy()
-        timesteps = torch.from_numpy(timesteps).to(dtype=torch.float32)
+        timesteps = torch.from_numpy(np.asarray(timesteps)).to(dtype=torch.float32)
 
         sigmas = timesteps / num_train_timesteps
         if not use_dynamic_shifting:
