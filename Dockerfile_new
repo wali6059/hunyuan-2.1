@@ -44,8 +44,7 @@ COPY requirements.txt ./
 
 # Install PyTorch first (most stable, cacheable layer)
 RUN uv pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 \
-    --index-url https://download.pytorch.org/whl/cu121 \
-    && uv pip cache clean
+    --index-url https://download.pytorch.org/whl/cu121
 
 # Install core dependencies in optimized order (by stability/change frequency)
 RUN uv pip install \
@@ -59,22 +58,19 @@ RUN uv pip install \
     # Computer vision (stable)
     opencv-python==4.10.0.84 imageio==2.36.0 scikit-image==0.24.0 \
     # 3D processing (stable)
-    trimesh==4.4.7 pygltflib==1.16.3 \
-    && uv pip cache clean
+    trimesh==4.4.7 pygltflib==1.16.3
 
 # Install remaining packages (less stable, separate layer)
 RUN uv pip install \
     rembg==2.0.65 onnxruntime-gpu xatlas==0.0.9 \
     omegaconf==2.3.0 pyyaml==6.0.2 tqdm==4.66.5 psutil==6.0.0 \
     fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.10.6 \
-    boto3 runpod requests Pillow \
-    && uv pip cache clean
+    boto3 runpod requests Pillow
 
 # Install optional packages (most likely to fail/change)
 RUN uv pip install pymeshlab==2022.2.post3 realesrgan==0.3.0 \
     basicsr==1.4.2 open3d==0.18.0 torchmetrics==1.6.0 timm torchdiffeq \
-    || echo "Some optional packages failed" \
-    && uv pip cache clean
+    || echo "Some optional packages failed"
 
 # Copy source code (after dependencies for better caching)
 COPY . .
