@@ -34,7 +34,7 @@ from huggingface_hub import snapshot_download
 def upload_to_r2(file_like, object_name):
     """
     Upload an in‑memory buffer to a Cloudflare R2 bucket and
-    return a public (or presigned) download URL.
+    return a presigned download URL (compatible with Hunyuan 2.0).
     """
 
     # ---- upload ---------------------------------------------------------
@@ -43,12 +43,16 @@ def upload_to_r2(file_like, object_name):
         Fileobj=file_like,
         Bucket=bucket_name,
         Key=object_name,
+        ExtraArgs={"ContentType": "model/gltf-binary"},
     )
     
-    # ---- generate download URL ----------------------------------------- 
-    # return public URL if bucket allows public read
-    public_url = f"https://pub-{account_hash}.r2.dev/{object_name}"
-    return public_url
+    # ---- return a one‑hour presigned URL -------------------------------
+    url = s3.generate_presigned_url(
+        ClientMethod="get_object",
+        Params={"Bucket": bucket_name, "Key": object_name},
+        ExpiresIn=3600,
+    )
+    return url
 
 
 def worker_fn(input_data):
@@ -199,12 +203,11 @@ def init_models():
 
 
 if __name__ == "__main__":
-    # Initialize R2 credentials
-    account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID', '')
-    access_key_id = os.getenv('CLOUDFLARE_ACCESS_KEY_ID', '')
-    secret_access_key = os.getenv('CLOUDFLARE_SECRET_ACCESS_KEY', '')
-    bucket_name = os.getenv('CLOUDFLARE_BUCKET_NAME', 'hunyuan3d')
-    account_hash = os.getenv('CLOUDFLARE_ACCOUNT_HASH', '')
+    # Initialize R2 credentials (compatible with Hunyuan 2.0 format)
+    account_id = os.getenv('CF_R2_ACCOUNT_ID', '')
+    access_key_id = os.getenv('CF_R2_ACCESS_KEY', '')
+    secret_access_key = os.getenv('CF_R2_SECRET_KEY', '')
+    bucket_name = os.getenv('CF_R2_BUCKET', 'hunyuan3d')
 
     # Initialize S3 client for R2
     s3 = boto3.client(
