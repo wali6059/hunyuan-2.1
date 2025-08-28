@@ -16,14 +16,16 @@
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1/hy3dpaint/**)",
       "Bash(cp:*)",
       "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
-      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)"
+      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan/**)",
+      "Read(/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/**)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1/hy3dshape",
       "/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1/hy3dpaint",
-      "/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1"
+      "/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1/Hunyuan3D-2.1",
+      "/mnt/c/Users/WALI AHMED/OneDrive/Desktop/Hunyuan-2.1"
     ]
   }
 }

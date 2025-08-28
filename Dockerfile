@@ -20,13 +20,39 @@ RUN uv pip install --system wheel setuptools pybind11[global] ninja packaging cm
 # Copy only the CUDA extension source code
 WORKDIR /app
 COPY hy3dpaint/custom_rasterizer/ ./hy3dpaint/custom_rasterizer/
+COPY hy3dpaint/DifferentiableRenderer/ ./hy3dpaint/DifferentiableRenderer/
 
 # Build wheels for custom_rasterizer
 RUN cd hy3dpaint/custom_rasterizer && \
     MAX_JOBS=4 python setup.py bdist_wheel && \
     mkdir -p /wheels && \
+    cp dist/*.whl /wheels/
+
+# Build wheel for DifferentiableRenderer (C++ pybind11 extension)
+RUN cd hy3dpaint/DifferentiableRenderer && \
+    bash compile_mesh_painter.sh && \
+    python -c "
+from setuptools import setup, Extension
+import pybind11
+
+ext = Extension(
+    'mesh_inpaint_processor',
+    ['mesh_inpaint_processor.cpp'],
+    include_dirs=[pybind11.get_include()],
+    language='c++',
+    extra_compile_args=['-O3', '-std=c++11', '-fPIC'],
+)
+
+setup(
+    name='differentiable_renderer',
+    ext_modules=[ext],
+    version='0.1.0',
+    zip_safe=False,
+)
+" > setup.py && \
+    python setup.py bdist_wheel && \
     cp dist/*.whl /wheels/ && \
-    echo "Built wheel: $(ls /wheels/)"
+    echo "Built wheels: $(ls /wheels/)"
 
 # =============================================================================
 # BUILD STAGE - Using pre-built PyTorch base for fast deployment
@@ -129,6 +155,14 @@ COPY --from=builder /app/.venv/lib/python3.11/site-packages /opt/conda/lib/pytho
 # Runtime Layer 3.5: Copy wheels to host for extraction
 COPY --from=wheel-builder /wheels /wheels
 
+# Create script to extract wheels to host
+RUN echo '#!/bin/bash\n\
+echo "Extracting wheels to host..."\n\
+mkdir -p /host/wheels 2>/dev/null || true\n\
+cp -v /wheels/*.whl /host/wheels/ 2>/dev/null || echo "Note: Mount /host to extract wheels"\n\
+echo "Wheels available at: $(ls /wheels/)"\n\
+' > /extract_wheels.sh && chmod +x /extract_wheels.sh
+
 # Runtime Layer 4: Core modules (medium size, stable)
 COPY --from=builder /app/hy3dshape /app/hy3dshape
 COPY --from=builder /app/hy3dpaint /app/hy3dpaint
@@ -146,3 +180,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=2 \
 
 EXPOSE 8080
 CMD ["python", "api_server.py"]
+
+# =============================================================================
+# WHEELS EXTRACTION STAGE - For saving wheels to host during build
+# =============================================================================
+FROM scratch AS wheels-export
+COPY --from=wheel-builder /wheels /wheels
