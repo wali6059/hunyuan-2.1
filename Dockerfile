@@ -184,7 +184,6 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy source code
 COPY --from=builder /app/hy3dgen /app/hy3dgen
 COPY --from=builder /app/api_server.py /app/api_server.py
-COPY --from=builder /app/setup.py /app/setup.py
 
 # Copy pre-downloaded models
 COPY --from=builder /app/weights /app/weights
